@@ -1,0 +1,8 @@
+worktree /tmp/claude-0/-home-user-pi-gui/db9d0f48-9a96-5fc1-9648-b344f5ab1d81/scratchpad/gitprobe/repo
+HEAD 58a05a489020ad67891215949a4c01fb168e91c3
+branch refs/heads/main
+
+worktree /tmp/claude-0/-home-user-pi-gui/db9d0f48-9a96-5fc1-9648-b344f5ab1d81/scratchpad/gitprobe/wt-feature-x
+HEAD 58a05a489020ad67891215949a4c01fb168e91c3
+branch refs/heads/feature-x
+

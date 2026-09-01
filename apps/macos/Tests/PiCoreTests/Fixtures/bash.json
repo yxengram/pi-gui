@@ -1,0 +1,12 @@
+{
+  "id": "7",
+  "type": "response",
+  "command": "bash",
+  "success": true,
+  "data": {
+    "output": "hello-from-pi-bash\n",
+    "exitCode": 0,
+    "cancelled": false,
+    "truncated": false
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "id": "5",
+  "type": "response",
+  "command": "get_tree",
+  "success": true,
+  "data": {
+    "tree": [
+      {
+        "entry": {
+          "type": "session_info",
+          "id": "eaf74828",
+          "parentId": null,
+          "timestamp": "2026-09-01T11:23:23.162Z",
+          "name": "probe session"
+        },
+        "children": [
+          {
+            "entry": {
+              "type": "model_change",
+              "id": "6169e4f4",
+              "parentId": "eaf74828",
+              "timestamp": "2026-09-01T11:23:23.176Z",
+              "provider": "amazon-bedrock",
+              "modelId": "us.anthropic.claude-opus-4-6-v1"
+            },
+            "children": [
+              {
+                "entry": {
+                  "type": "thinking_level_change",
+                  "id": "0924e238",
+                  "parentId": "6169e4f4",
+                  "timestamp": "2026-09-01T11:23:23.176Z",
+                  "thinkingLevel": "medium"
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "leafId": "0924e238"
+  }
+}

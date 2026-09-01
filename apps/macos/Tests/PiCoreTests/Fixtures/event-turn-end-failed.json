@@ -1,0 +1,27 @@
+{
+  "type": "turn_end",
+  "message": {
+    "role": "assistant",
+    "content": [],
+    "api": "bedrock-converse-stream",
+    "provider": "amazon-bedrock",
+    "model": "us.anthropic.claude-opus-4-6-v1",
+    "usage": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "totalTokens": 0,
+      "cost": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "total": 0
+      }
+    },
+    "stopReason": "error",
+    "timestamp": 1788263795550,
+    "errorMessage": "UnrecognizedClientException: 403: [object Object]"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "id": "1",
+  "type": "response",
+  "command": "get_state",
+  "success": true,
+  "data": {
+    "model": {
+      "id": "us.anthropic.claude-opus-4-6-v1",
+      "name": "Claude Opus 4.6 (US)",
+      "api": "bedrock-converse-stream",
+      "provider": "amazon-bedrock",
+      "baseUrl": "https://bedrock-runtime.us-east-1.amazonaws.com",
+      "reasoning": true,
+      "thinkingLevelMap": {
+        "max": "max"
+      },
+      "input": [
+        "text",
+        "image"
+      ],
+      "cost": {
+        "input": 5,
+        "output": 25,
+        "cacheRead": 0.5,
+        "cacheWrite": 6.25
+      },
+      "contextWindow": 1000000,
+      "maxTokens": 128000
+    },
+    "thinkingLevel": "medium",
+    "isStreaming": false,
+    "isCompacting": false,
+    "steeringMode": "one-at-a-time",
+    "followUpMode": "one-at-a-time",
+    "sessionFile": "/tmp/pi-rpc-23WKTb/sessions/2026-09-01T11-23-23-161Z_01a05cb5-a499-7eec-9467-91f9349a2572.jsonl",
+    "sessionId": "01a05cb5-a499-7eec-9467-91f9349a2572",
+    "sessionName": "probe session",
+    "autoCompactionEnabled": true,
+    "messageCount": 0,
+    "pendingMessageCount": 0
+  }
+}

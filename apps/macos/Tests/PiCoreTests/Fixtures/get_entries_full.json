@@ -1,0 +1,63 @@
+{
+  "id": "e",
+  "type": "response",
+  "command": "get_entries",
+  "success": true,
+  "data": {
+    "entries": [
+      {
+        "type": "session_info",
+        "id": "bf2651c1",
+        "parentId": null,
+        "timestamp": "2026-09-01T11:30:17.430Z",
+        "name": "fixture thread"
+      },
+      {
+        "type": "model_change",
+        "id": "0b7e1291",
+        "parentId": "bf2651c1",
+        "timestamp": "2026-09-01T11:30:17.441Z",
+        "provider": "amazon-bedrock",
+        "modelId": "us.anthropic.claude-opus-4-6-v1"
+      },
+      {
+        "type": "thinking_level_change",
+        "id": "25f4ccf7",
+        "parentId": "0b7e1291",
+        "timestamp": "2026-09-01T11:30:17.441Z",
+        "thinkingLevel": "medium"
+      },
+      {
+        "type": "message",
+        "id": "35865648",
+        "parentId": "25f4ccf7",
+        "timestamp": "2026-09-01T11:30:19.130Z",
+        "message": {
+          "role": "bashExecution",
+          "command": "echo first-command",
+          "output": "first-command\n",
+          "exitCode": 0,
+          "cancelled": false,
+          "truncated": false,
+          "timestamp": 1788262219130
+        }
+      },
+      {
+        "type": "message",
+        "id": "afc3b17f",
+        "parentId": "35865648",
+        "timestamp": "2026-09-01T11:30:20.628Z",
+        "message": {
+          "role": "bashExecution",
+          "command": "ls /nonexistent-path-xyz",
+          "output": "ls: cannot access '/nonexistent-path-xyz': No such file or directory\n",
+          "exitCode": 2,
+          "cancelled": false,
+          "truncated": false,
+          "timestamp": 1788262220628
+        }
+      }
+    ],
+    "leafId": "afc3b17f"
+  }
+}
