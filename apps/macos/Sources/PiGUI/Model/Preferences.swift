@@ -54,8 +54,17 @@ public final class Preferences: @unchecked Sendable {
         set { defaults.set(newValue, forKey: Key.showThinking) }
     }
 
+    /// Shell for the integrated terminal.
+    ///
+    /// The settings field stores an empty string when the user clears it, so empty
+    /// must mean "unset" — otherwise the terminal would try to spawn "".
     public var terminalShell: String {
-        get { defaults.string(forKey: Key.terminalShell) ?? ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh" }
+        get {
+            let configured = defaults.string(forKey: Key.terminalShell)?
+                .trimmingCharacters(in: .whitespaces)
+            if let configured, !configured.isEmpty { return configured }
+            return ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
+        }
         set { defaults.set(newValue, forKey: Key.terminalShell) }
     }
 

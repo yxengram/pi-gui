@@ -39,6 +39,7 @@ struct RootView: View {
                 .environmentObject(model)
         }
         .task {
+            RunNotifier.shared.requestAuthorizationIfNeeded()
             await model.reloadThreads()
         }
         .onReceive(NotificationCenter.default.publisher(for: .piNewThread)) { _ in

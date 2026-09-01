@@ -1,6 +1,7 @@
 import SwiftUI
 import PiCore
 import AppKit
+import UniformTypeIdentifiers
 
 /// Prompt entry.
 ///
@@ -12,6 +13,7 @@ struct ComposerView: View {
 
     @State private var text = ""
     @State private var attachments: [PiImageContent] = []
+    @State private var isDropTargeted = false
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -57,6 +59,24 @@ struct ComposerView: View {
         .padding(12)
         .background(.bar)
         .onAppear { isFocused = true }
+        // Dragging a screenshot straight onto the composer is how people actually
+        // attach one; making them go through a file picker is a downgrade.
+        .dropDestination(for: URL.self) { urls, _ in
+            let added = urls.compactMap(Self.imageAttachment(at:))
+            guard !added.isEmpty else { return false }
+            attachments.append(contentsOf: added)
+            return true
+        } isTargeted: { isTargeted in
+            isDropTargeted = isTargeted
+        }
+        .overlay {
+            if isDropTargeted {
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 2, dash: [6]))
+                    .padding(6)
+                    .allowsHitTesting(false)
+            }
+        }
     }
 
     private var placeholder: String {
@@ -142,13 +162,16 @@ struct ComposerView: View {
         panel.allowedContentTypes = [.png, .jpeg, .gif, .webP]
         guard panel.runModal() == .OK else { return }
 
-        for url in panel.urls {
-            guard let data = try? Data(contentsOf: url) else { continue }
-            attachments.append(PiImageContent(
-                base64Data: data.base64EncodedString(),
-                mimeType: Self.mimeType(for: url)
-            ))
-        }
+        attachments.append(contentsOf: panel.urls.compactMap(Self.imageAttachment(at:)))
+    }
+
+    /// Reads an image file into the base64 form pi expects, ignoring anything that is
+    /// not an image so dropping a folder or a text file is a no-op rather than an error.
+    private static func imageAttachment(at url: URL) -> PiImageContent? {
+        let supported = ["png", "jpg", "jpeg", "gif", "webp"]
+        guard supported.contains(url.pathExtension.lowercased()),
+              let data = try? Data(contentsOf: url) else { return nil }
+        return PiImageContent(base64Data: data.base64EncodedString(), mimeType: mimeType(for: url))
     }
 
     private static func mimeType(for url: URL) -> String {

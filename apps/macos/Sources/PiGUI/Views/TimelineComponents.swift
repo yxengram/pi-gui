@@ -149,7 +149,7 @@ struct MonospacedOutput: View {
 
     private var displayed: String {
         guard text.count > Self.characterLimit else { return text }
-        let truncated = text.prefix(Self.characterLimit)
+        let truncated = String(text.prefix(Self.characterLimit))
         let omitted = text.count - Self.characterLimit
         return truncated + "\n… \(omitted) more characters"
     }

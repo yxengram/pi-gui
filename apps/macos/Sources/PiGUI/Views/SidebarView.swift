@@ -8,6 +8,7 @@ struct SidebarView: View {
     var onNewThread: () -> Void
 
     @State private var searchText = ""
+    @State private var showsArchived = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -32,6 +33,10 @@ struct SidebarView: View {
                         }
                     }
                 }
+
+                Divider()
+                Toggle("Show Archived Threads", isOn: $showsArchived)
+                    .disabled(model.archivedThreadPaths.isEmpty)
 
                 if !model.workspaces.isEmpty {
                     Divider()
@@ -90,10 +95,14 @@ struct SidebarView: View {
             } else {
                 List(selection: threadSelection) {
                     ForEach(filteredThreads) { thread in
-                        ThreadRow(thread: thread)
+                        ThreadRow(thread: thread, isArchived: model.archivedThreadPaths.contains(thread.url.path))
                             .tag(thread.url.path)
                             .contextMenu {
-                                Button("Archive") { model.archiveThread(thread) }
+                                if model.archivedThreadPaths.contains(thread.url.path) {
+                                    Button("Unarchive") { model.unarchiveThread(path: thread.url.path) }
+                                } else {
+                                    Button("Archive") { model.archiveThread(thread) }
+                                }
                                 Button("Reveal Session File") {
                                     NSWorkspace.shared.activateFileViewerSelecting([thread.url])
                                 }
@@ -119,7 +128,7 @@ struct SidebarView: View {
     }
 
     private var filteredThreads: [SessionStore.Summary] {
-        let visible = model.visibleThreads
+        let visible = showsArchived ? model.threads : model.visibleThreads
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !query.isEmpty else { return visible }
         return visible.filter {
@@ -145,12 +154,20 @@ struct SidebarView: View {
 
 private struct ThreadRow: View {
     let thread: SessionStore.Summary
+    var isArchived = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(thread.title)
-                .font(.callout)
-                .lineLimit(1)
+            HStack(spacing: 4) {
+                if isArchived {
+                    Image(systemName: "archivebox")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                Text(thread.title)
+                    .font(.callout)
+                    .lineLimit(1)
+            }
             HStack(spacing: 6) {
                 Text(thread.modifiedAt, format: .relative(presentation: .named))
                 if thread.messageCount > 0 {

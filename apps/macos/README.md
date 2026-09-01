@@ -101,8 +101,15 @@ are the assumptions most likely to break on a pi upgrade:
   full-screen programs (`vim`, `top`) will not render correctly.
 - **Multi-agent orchestration** (a thread supervising child threads) is present in the
   Electron app and not yet ported here.
-- **Notifications, theme presets and the skills/extensions manager** are not yet
-  ported; skills and extensions are still configured through `pi`.
+- **Theme presets and the skills/extensions manager** are not yet ported. The app
+  follows the system appearance, and skills and extensions are configured through
+  `pi` itself.
+- **`@`-mention file completion in the composer** is not yet ported. Attaching images
+  works by drag-and-drop or the paperclip button; pasting an image from the clipboard
+  is not yet handled.
+- **Run-finished notifications** fire only when the app is in the background, on
+  `agent_settled` rather than `agent_end`, so a run that retries internally does not
+  notify twice.
 
 ## Regenerating test fixtures
 

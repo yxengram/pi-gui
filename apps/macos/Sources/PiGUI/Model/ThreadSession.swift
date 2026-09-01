@@ -53,6 +53,9 @@ public final class ThreadSession: ObservableObject, Identifiable {
 
     private let client: PiRPCClient
     private var eventTask: Task<Void, Never>?
+    /// Read per refresh rather than captured at init, so toggling the setting takes
+    /// effect on the next update instead of only for threads opened afterwards.
+    private var showsThinking: Bool { Preferences.shared.showThinking }
 
     public init(
         id: String = UUID().uuidString,
@@ -231,6 +234,13 @@ public final class ThreadSession: ObservableObject, Identifiable {
             runningTools = []
             queuedMessages.removeAll()
             await refreshFromPi()
+            // `agent_settled` — not `agent_end` — is the point at which pi will not
+            // continue on its own through a retry, compaction or queued follow-up.
+            // Notifying on agent_end would fire mid-run on every retry.
+            RunNotifier.shared.runFinished(
+                threadTitle: title,
+                summary: timeline.last { $0.kind == .assistantMessage }?.text
+            )
 
         case .queueUpdate:
             if let pending = event.payload["queued"]?.arrayValue {
@@ -243,7 +253,9 @@ public final class ThreadSession: ObservableObject, Identifiable {
             }
 
         case .extensionError:
-            lastError = event.payload["error"]?.stringValue ?? "An extension failed"
+            let message = event.payload["error"]?.stringValue ?? "An extension failed"
+            lastError = message
+            RunNotifier.shared.runFailed(threadTitle: title, message: message)
 
         case .autoRetryStart:
             lastError = nil
@@ -275,7 +287,7 @@ public final class ThreadSession: ObservableObject, Identifiable {
         // pi reports the active leaf explicitly; that beats any local heuristic.
         let leafID = response.data?["leafId"]?.stringValue
         let branch = SessionTree(entries: entries).activeBranch(leafID: leafID)
-        timeline = TimelineBuilder.build(branch: branch)
+        timeline = TimelineBuilder.build(branch: branch, includeThinking: showsThinking)
 
         if let name = entries.last(where: { $0.kind == .sessionInfo })?.sessionName {
             title = name
