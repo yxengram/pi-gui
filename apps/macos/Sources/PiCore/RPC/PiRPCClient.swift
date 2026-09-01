@@ -107,8 +107,13 @@ public actor PiRPCClient {
 
     // MARK: - Lifecycle
 
+    /// Starts the pi process. A client is single-use: once the process exits its
+    /// event stream is finished and cannot be revived, so restarting a thread means
+    /// building a new client rather than calling this again.
     public func start() throws {
         guard process == nil else { return }
+        if case .exited = state { throw PiRPCError.notRunning }
+        if case .failed = state { throw PiRPCError.notRunning }
 
         let executable = try PiExecutable.resolve(override: configuration.executableOverride)
 
@@ -152,7 +157,9 @@ public actor PiRPCClient {
         do {
             try process.run()
         } catch {
-            throw PiRPCError.launchFailed(reason: error.localizedDescription)
+            let failure = PiRPCError.launchFailed(reason: error.localizedDescription)
+            transition(to: .failed(String(describing: failure)))
+            throw failure
         }
 
         self.process = process
