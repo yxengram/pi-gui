@@ -128,14 +128,35 @@ public final class AppModel: ObservableObject {
         isLoadingThreads = true
         defer { isLoadingThreads = false }
 
-        let path = workspace.path
+        // pi files sessions by the directory the agent ran in, so a thread started in
+        // a worktree lives under that worktree's directory, not the workspace's.
+        // Scanning only the workspace would make worktree threads disappear from the
+        // sidebar on relaunch.
+        let directories = [workspace.path] + worktreeDirectories(for: workspace)
         let store = sessionStore
+
         // Reading and parsing every session file is I/O plus JSON work; keeping it
         // off the main actor stops the sidebar from stuttering on a large history.
         let found = await Task.detached { () -> [SessionStore.Summary] in
-            (try? store.listSessions(forWorkingDirectory: path)) ?? []
+            var seen = Set<String>()
+            var summaries: [SessionStore.Summary] = []
+            for directory in directories {
+                for summary in (try? store.listSessions(forWorkingDirectory: directory)) ?? [] {
+                    guard seen.insert(summary.url.path).inserted else { continue }
+                    summaries.append(summary)
+                }
+            }
+            return summaries.sorted { $0.modifiedAt > $1.modifiedAt }
         }.value
         threads = found
+    }
+
+    /// Worktrees of the workspace's repository that this app created.
+    private func worktreeDirectories(for workspace: Workspace) -> [String] {
+        guard let git, git.isRepository(workspace.url) else { return [] }
+        let manager = WorktreeManager(git: git, worktreeRoot: preferences.worktreeRoot)
+        let worktrees = (try? manager.listWorktrees(repository: workspace.url)) ?? []
+        return worktrees.filter { !$0.isPrimary }.map(\.path.path)
     }
 
     public func openThread(_ summary: SessionStore.Summary) async {
@@ -143,12 +164,20 @@ public final class AppModel: ObservableObject {
         await closeActiveSession()
 
         selectedThreadPath = summary.url.path
+
+        // Resume in the directory the session was recorded against. pi refuses to
+        // resume a session whose stored cwd is missing, and a worktree thread's cwd
+        // is the worktree — not the workspace.
+        let runDirectory = summary.workingDirectory.map(URL.init(fileURLWithPath:)) ?? workspace.url
+        let worktree = worktreeForDirectory(runDirectory, workspace: workspace)
+
         let session = ThreadSession(
             id: summary.sessionID,
             title: summary.title,
-            workingDirectory: workspace.url,
+            workingDirectory: runDirectory,
+            worktree: worktree,
             configuration: PiRPCClient.Configuration(
-                workingDirectory: workspace.url,
+                workingDirectory: runDirectory,
                 sessionFile: summary.url,
                 executableOverride: preferences.piExecutablePath
             )
@@ -196,6 +225,16 @@ public final class AppModel: ObservableObject {
         await session.refreshState()
         propagateStartupFailure(from: session)
         await reloadThreads()
+    }
+
+    /// The worktree a directory corresponds to, so a reopened thread still shows its
+    /// branch in the header.
+    private func worktreeForDirectory(_ directory: URL, workspace: Workspace) -> Worktree? {
+        guard let git, git.isRepository(workspace.url) else { return nil }
+        let manager = WorktreeManager(git: git, worktreeRoot: preferences.worktreeRoot)
+        let worktrees = (try? manager.listWorktrees(repository: workspace.url)) ?? []
+        let target = directory.standardizedFileURL.path
+        return worktrees.first { !$0.isPrimary && $0.path.standardizedFileURL.path == target }
     }
 
     private func makeWorktree(for workspace: Workspace, threadID: String, title: String) throws -> Worktree {

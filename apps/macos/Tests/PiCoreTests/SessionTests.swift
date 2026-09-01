@@ -109,18 +109,12 @@ final class SessionTreeTests: XCTestCase {
         XCTAssertEqual(SessionTree(entries: entries).branch(endingAt: "a").count, 2)
     }
 
-    /// The fixture's last-written entry (bb000001) is on the abandoned branch, while
-    /// the newest entry (aa000004) is on the active one. Timestamp must win.
-    func testDefaultLeafPrefersNewestTipOverLastWritten() throws {
-        XCTAssertEqual(try tree().defaultLeafID, "aa000004")
-    }
-
-    func testDefaultLeafFallsBackToFileOrderWithoutTimestamps() {
-        let entries = [
-            SessionEntry(id: "a", parentID: nil, kind: .message, timestamp: nil, payload: .object([:])),
-            SessionEntry(id: "b", parentID: "a", kind: .message, timestamp: nil, payload: .object([:])),
-        ]
-        XCTAssertEqual(SessionTree(entries: entries).defaultLeafID, "b")
+    /// pi resolves the leaf by file order, not by timestamp. Confirmed by resuming
+    /// this exact fixture in a live `pi --mode rpc`, which reported `leafId` as
+    /// bb000001 — the last line — even though aa000004 carries a newer timestamp.
+    /// Diverging here would show a different branch than pi considers active.
+    func testDefaultLeafMatchesPiAndUsesFileOrder() throws {
+        XCTAssertEqual(try tree().defaultLeafID, "bb000001")
     }
 
     func testEmptyEntriesProduceEmptyBranch() {
@@ -176,7 +170,9 @@ final class SessionStoreTests: XCTestCase {
         XCTAssertEqual(summary.title, "fixture thread")
         XCTAssertEqual(summary.workingDirectory, "/Users/dev/projects/demo")
         XCTAssertEqual(summary.preview, "List the source files")
-        XCTAssertEqual(summary.messageCount, 7)
+        // Branch-scoped, matching pi: a live pi resuming this same file reported
+        // messageCount 4, while the file as a whole holds 7 message entries.
+        XCTAssertEqual(summary.messageCount, 4)
     }
 
     func testTitleFallsBackToPreviewThenPlaceholder() {

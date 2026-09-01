@@ -72,6 +72,27 @@ swift test --filter JSONLFramerTests
 swift test --filter TimelineBuilderTests/testToolCallIsJoinedWithItsResult
 ```
 
+## Verified `pi` behaviors this app depends on
+
+These were confirmed by driving a real `pi --mode rpc`, not read off the docs. They
+are the assumptions most likely to break on a pi upgrade:
+
+- **`--session <file>` resumes in RPC mode**, and `get_entries` returns the resumed
+  session's full entry tree plus its `leafId`.
+- **pi refuses to resume a session whose recorded `cwd` no longer exists**, exiting
+  with an explanatory message on stderr. The app resumes each thread in the directory
+  recorded in its session header for exactly this reason, and surfaces pi's stderr
+  when startup fails.
+- **The active leaf is the last entry in file order**, not the newest timestamp. A
+  session whose final line is on an abandoned branch still reports that branch as
+  active. The offline fallback in `SessionTree.defaultLeafID` matches this
+  deliberately; a "smarter" rule would show a different conversation than pi does.
+- **`messageCount` is branch-scoped.** A branched session holds every path ever
+  explored; pi counts only the active one, and so does the sidebar.
+- **Closing stdin does not always end the process**, so shutdown falls back to
+  `SIGTERM` after a grace period.
+- **`session_info_changed` is emitted but undocumented** in the RPC event table.
+
 ## Notes and current limits
 
 - **The integrated terminal is line-oriented.** It runs a login shell on a real PTY

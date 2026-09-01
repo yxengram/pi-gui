@@ -72,22 +72,16 @@ public struct SessionTree: Sendable {
 
     /// The leaf to show when the caller has no better information.
     ///
-    /// A live session's authoritative leaf comes from pi itself (`get_entries`
-    /// reports `leafId`); this is the fallback for a file read off disk. The newest
-    /// timestamp wins, with file order breaking ties. Preferring file order alone
-    /// would be wrong for a session whose last-written entry belongs to a branch the
-    /// user has already navigated away from.
+    /// Matches pi: the last leaf in file order. Verified against a live
+    /// `pi --mode rpc` resuming a branching session — it reported the final entry as
+    /// the leaf even though an earlier-written entry carried a newer timestamp.
+    /// Choosing "newest timestamp" instead would show a different branch than pi
+    /// itself considers active, which is exactly the divergence this app must avoid.
+    ///
+    /// A live session's leaf comes from pi directly (`get_entries` reports `leafId`);
+    /// this is only the fallback for a file read off disk.
     public var defaultLeafID: String? {
-        let leaves = leafIDs
-        guard !leaves.isEmpty else { return nil }
-
-        var best: (id: String, timestamp: Date)?
-        for id in leaves {
-            guard let timestamp = nodesByID[id]?.entry.timestamp else { continue }
-            if let current = best, current.timestamp >= timestamp { continue }
-            best = (id, timestamp)
-        }
-        return best?.id ?? leaves.last
+        leafIDs.last
     }
 
     /// The active branch, preferring an explicit leaf and otherwise the default one.

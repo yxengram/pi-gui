@@ -98,7 +98,12 @@ public struct SessionStore: Sendable {
         let modifiedAt = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
             .contentModificationDate ?? file.header?.timestamp ?? .distantPast
 
-        let messages = file.entries.filter { $0.kind == .message }
+        // Count and preview the active branch, not the whole file. A session that has
+        // been branched holds every path ever explored, and totalling all of them
+        // reports a number pi does not recognise — pi's own `messageCount` is
+        // branch-scoped, which is also what the user sees in the transcript.
+        let branch = SessionTree(entries: file.entries).activeBranch()
+        let messages = branch.filter { $0.kind == .message }
         let preview = messages
             .first { $0.messageRole == "user" }
             .flatMap { AgentMessageText.plainText(from: $0.message) }
