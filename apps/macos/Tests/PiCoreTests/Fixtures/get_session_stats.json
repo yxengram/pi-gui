@@ -1,0 +1,28 @@
+{
+  "id": "8",
+  "type": "response",
+  "command": "get_session_stats",
+  "success": true,
+  "data": {
+    "sessionFile": "/tmp/pi-rpc-23WKTb/sessions/2026-09-01T11-23-23-161Z_01a05cb5-a499-7eec-9467-91f9349a2572.jsonl",
+    "sessionId": "01a05cb5-a499-7eec-9467-91f9349a2572",
+    "userMessages": 0,
+    "assistantMessages": 0,
+    "toolCalls": 0,
+    "toolResults": 0,
+    "totalMessages": 1,
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "total": 0
+    },
+    "cost": 0,
+    "contextUsage": {
+      "tokens": 11,
+      "contextWindow": 1000000,
+      "percent": 0.0011
+    }
+  }
+}
