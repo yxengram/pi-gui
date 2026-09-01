@@ -27,12 +27,10 @@ public struct WorktreeManager: Sendable {
     private let git: GitCommand
     /// Root that holds every worktree this app creates.
     public let worktreeRoot: URL
-    private let fileManager: FileManager
 
-    public init(git: GitCommand, worktreeRoot: URL, fileManager: FileManager = .default) {
+    public init(git: GitCommand, worktreeRoot: URL) {
         self.git = git
         self.worktreeRoot = worktreeRoot
-        self.fileManager = fileManager
     }
 
     public enum Failure: Error, CustomStringConvertible {
@@ -123,7 +121,7 @@ public struct WorktreeManager: Sendable {
         let name = "\(Self.slug(for: title, fallback: "thread"))-\(shortID)"
         let destination = worktreeRoot.appendingPathComponent(name)
 
-        try fileManager.createDirectory(at: worktreeRoot, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: worktreeRoot, withIntermediateDirectories: true)
 
         // `-b` fails if the branch already exists, which is exactly right: silently
         // reusing someone else's branch would put two threads on one ref.

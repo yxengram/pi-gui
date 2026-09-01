@@ -9,17 +9,12 @@ import Foundation
 public struct SessionStore: Sendable {
     /// Root of pi's agent data, `~/.pi/agent` by default.
     public let agentDirectory: URL
-    private let fileManager: FileManager
 
-    public init(
-        agentDirectory: URL? = nil,
-        fileManager: FileManager = .default
-    ) {
+    public init(agentDirectory: URL? = nil) {
         self.agentDirectory = agentDirectory
             ?? URL(fileURLWithPath: NSHomeDirectory())
                 .appendingPathComponent(".pi")
                 .appendingPathComponent("agent")
-        self.fileManager = fileManager
     }
 
     public var sessionsDirectory: URL {
@@ -75,9 +70,9 @@ public struct SessionStore: Sendable {
     /// Lists the sessions belonging to a working directory, newest first.
     public func listSessions(forWorkingDirectory path: String) throws -> [Summary] {
         let directory = sessionDirectory(forWorkingDirectory: path)
-        guard fileManager.fileExists(atPath: directory.path) else { return [] }
+        guard FileManager.default.fileExists(atPath: directory.path) else { return [] }
 
-        let contents = try fileManager.contentsOfDirectory(
+        let contents = try FileManager.default.contentsOfDirectory(
             at: directory,
             includingPropertiesForKeys: [.contentModificationDateKey],
             options: [.skipsHiddenFiles]
