@@ -89,6 +89,13 @@ are the assumptions most likely to break on a pi upgrade:
   deliberately; a "smarter" rule would show a different conversation than pi does.
 - **`messageCount` is branch-scoped.** A branched session holds every path ever
   explored; pi counts only the active one, and so does the sidebar.
+- **A prompt can be accepted and still fail.** With no usable credentials pi rejects
+  the command outright (`success: false`, with multi-line guidance that is shown
+  verbatim). But when credentials exist and the *provider* rejects the call, the
+  prompt is accepted and the failure arrives later on the event stream: `turn_end`
+  carries an assistant message with `stopReason: "error"`, an `errorMessage`, and
+  empty content. Both paths are handled; treating only the first as failure would
+  make a failed run report as a normal finish.
 - **Closing stdin does not always end the process**, so shutdown falls back to
   `SIGTERM` after a grace period.
 - **`session_info_changed` is emitted but undocumented** in the RPC event table.

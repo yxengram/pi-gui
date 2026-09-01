@@ -79,6 +79,31 @@ final class PiRPCProtocolTests: XCTestCase {
         XCTAssertEqual(event.payload["detail"]?.stringValue, "x")
     }
 
+    /// pi rejects an unknown command with success:false plus a reason, which the
+    /// client turns into a thrown error rather than a silently ignored request.
+    func testDecodesRejectedCommandResponse() throws {
+        guard case let .response(response) = try PiRPCIncoming(json: json("response-unknown-command.json")) else {
+            return XCTFail("expected a response")
+        }
+        XCTAssertFalse(response.success)
+        XCTAssertEqual(response.command, "not_a_real_command")
+        XCTAssertEqual(response.error, "Unknown command: not_a_real_command")
+    }
+
+    /// The most common real rejection: no credentials for the selected model. pi's
+    /// message is multi-line and tells the user how to fix it, so it is surfaced
+    /// verbatim rather than replaced with a generic failure string.
+    func testDecodesMissingCredentialsRejection() throws {
+        guard case let .response(response) = try PiRPCIncoming(json: json("response-prompt-no-auth.json")) else {
+            return XCTFail("expected a response")
+        }
+        XCTAssertFalse(response.success)
+        XCTAssertEqual(response.command, "prompt")
+        let message = try XCTUnwrap(response.error)
+        XCTAssertTrue(message.hasPrefix("No API key found"))
+        XCTAssertTrue(message.contains("\n"), "pi's guidance is multi-line and must survive intact")
+    }
+
     func testRecordWithoutTypeIsRejected() {
         XCTAssertThrowsError(try PiRPCIncoming(json: .object(["id": .string("1")])))
     }

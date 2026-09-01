@@ -1,0 +1,7 @@
+{
+  "id": "bad",
+  "type": "response",
+  "command": "not_a_real_command",
+  "success": false,
+  "error": "Unknown command: not_a_real_command"
+}

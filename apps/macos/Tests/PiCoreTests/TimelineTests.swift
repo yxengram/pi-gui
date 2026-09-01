@@ -81,19 +81,26 @@ final class TimelineBuilderTests: XCTestCase {
         XCTAssertFalse(items.contains { $0.id == "bf2651c1" })  // session_info
     }
 
-    func testFailedAssistantTurnSurfacesItsError() {
-        let payload = JSONValue.object([
-            "message": .object([
-                "role": .string("assistant"),
-                "content": .array([]),
-                "stopReason": .string("error"),
-                "errorMessage": .string("rate limited"),
-            ]),
-        ])
-        let entry = SessionEntry(id: "e1", parentID: nil, kind: .message, timestamp: nil, payload: payload)
+    /// A run can fail after the prompt is accepted: pi answers the command with
+    /// success, then the turn ends with stopReason "error", an errorMessage, and
+    /// empty content. This fixture is that exact event, captured from a real pi.
+    /// Without the errorMessage fallback the turn would render as nothing at all.
+    func testFailedAssistantTurnFromRealEventSurfacesItsError() throws {
+        let url = try XCTUnwrap(Bundle.module.url(forResource: "Fixtures/event-turn-end-failed.json", withExtension: nil))
+        let event = try JSONDecoder().decode(JSONValue.self, from: Data(contentsOf: url))
+        let message = try XCTUnwrap(event["message"])
+
+        XCTAssertEqual(message["stopReason"]?.stringValue, "error")
+        XCTAssertEqual(message["content"]?.arrayValue?.isEmpty, true)
+        XCTAssertNil(AgentMessageText.plainText(from: message))
+
+        let entry = SessionEntry(
+            id: "e1", parentID: nil, kind: .message, timestamp: nil,
+            payload: .object(["message": message])
+        )
         let items = TimelineBuilder.build(branch: [entry])
         XCTAssertEqual(items.first?.kind, .notice)
-        XCTAssertEqual(items.first?.text, "rate limited")
+        XCTAssertEqual(items.first?.text, message["errorMessage"]?.stringValue)
     }
 
     func testHiddenCustomMessageIsNotRendered() {

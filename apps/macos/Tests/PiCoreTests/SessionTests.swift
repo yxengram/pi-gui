@@ -59,6 +59,52 @@ final class SessionParsingTests: XCTestCase {
     }
 }
 
+/// The live path: entries arriving inside a `get_entries` response rather than as
+/// lines of a file. Fixture is a real response from `pi --mode rpc`.
+final class SessionEntryFromRPCTests: XCTestCase {
+    private func response() throws -> JSONValue {
+        let url = try XCTUnwrap(Bundle.module.url(forResource: "Fixtures/get_entries_full.json", withExtension: nil))
+        return try JSONDecoder().decode(JSONValue.self, from: Data(contentsOf: url))
+    }
+
+    func testBuildsEntriesFromRealGetEntriesResponse() throws {
+        let raw = try XCTUnwrap(response().path("data.entries")?.arrayValue)
+        let entries = raw.compactMap(SessionEntry.init(json:))
+
+        XCTAssertEqual(entries.count, raw.count, "every entry in a real response must parse")
+        XCTAssertEqual(entries.first?.kind, .sessionInfo)
+        XCTAssertEqual(entries.first?.sessionName, "fixture thread")
+        XCTAssertNil(entries.first?.parentID, "the first entry roots the tree")
+        XCTAssertTrue(entries.contains { $0.kind == .modelChange })
+        XCTAssertNotNil(entries.last?.timestamp)
+    }
+
+    /// pi reports the active leaf; the app must prefer it over any local heuristic.
+    func testResponseCarriesLeafID() throws {
+        XCTAssertEqual(try response().path("data.leafId")?.stringValue, "afc3b17f")
+    }
+
+    /// A real bashExecution message keeps its output and exit code on the message
+    /// itself rather than in a separate toolResult entry.
+    func testRealBashExecutionEntryRendersAsAToolRow() throws {
+        let raw = try XCTUnwrap(response().path("data.entries")?.arrayValue)
+        let entries = raw.compactMap(SessionEntry.init(json:))
+        let items = TimelineBuilder.build(branch: entries)
+
+        let tool = try XCTUnwrap(items.last?.tool)
+        XCTAssertEqual(tool.name, "bash")
+        XCTAssertEqual(tool.summary, "ls /nonexistent-path-xyz")
+        XCTAssertTrue(tool.isError, "exit code 2 must read as an error")
+        XCTAssertEqual(tool.output?.contains("No such file or directory"), true)
+    }
+
+    func testMalformedEntryIsSkippedNotCrashed() {
+        XCTAssertNil(SessionEntry(json: .object(["type": .string("message")])))   // no id
+        XCTAssertNil(SessionEntry(json: .object(["id": .string("a")])))           // no type
+        XCTAssertNil(SessionEntry(json: .string("not an object")))
+    }
+}
+
 final class SessionTreeTests: XCTestCase {
     private func tree() throws -> SessionTree {
         let url = try XCTUnwrap(Bundle.module.url(forResource: "Fixtures/session-branching.jsonl", withExtension: nil))

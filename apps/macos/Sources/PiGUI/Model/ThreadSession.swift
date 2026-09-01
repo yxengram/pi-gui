@@ -56,6 +56,9 @@ public final class ThreadSession: ObservableObject, Identifiable {
     /// Read per refresh rather than captured at init, so toggling the setting takes
     /// effect on the next update instead of only for threads opened afterwards.
     private var showsThinking: Bool { Preferences.shared.showThinking }
+    /// Error reported by the run in flight, so a failed run is not announced as a
+    /// successful one when it settles.
+    private var failureInCurrentRun: String?
 
     public init(
         id: String = UUID().uuidString,
@@ -190,6 +193,7 @@ public final class ThreadSession: ObservableObject, Identifiable {
             streamingText = ""
             streamingThinking = ""
             runningTools = []
+            failureInCurrentRun = nil
 
         case .messageUpdate:
             if let delta = event.textDelta {
@@ -221,6 +225,15 @@ public final class ThreadSession: ObservableObject, Identifiable {
             runningTools.removeAll { $0.id == id }
 
         case .messageEnd, .turnEnd:
+            // A run can fail *after* the prompt was accepted: pi answers the command
+            // with success, then the turn ends carrying stopReason "error" and an
+            // errorMessage, with empty content. Observed against a real pi with bad
+            // credentials — without this the run would report as a normal finish.
+            if event.message?["stopReason"]?.stringValue == "error" {
+                failureInCurrentRun = event.message?["errorMessage"]?.stringValue
+                    ?? "The run failed."
+            }
+
             // The finished message is now in pi's entries; drop the overlay so the
             // same text cannot render twice.
             streamingText = ""
@@ -234,13 +247,20 @@ public final class ThreadSession: ObservableObject, Identifiable {
             runningTools = []
             queuedMessages.removeAll()
             await refreshFromPi()
+
             // `agent_settled` — not `agent_end` — is the point at which pi will not
             // continue on its own through a retry, compaction or queued follow-up.
             // Notifying on agent_end would fire mid-run on every retry.
-            RunNotifier.shared.runFinished(
-                threadTitle: title,
-                summary: timeline.last { $0.kind == .assistantMessage }?.text
-            )
+            if let failure = failureInCurrentRun {
+                lastError = failure
+                RunNotifier.shared.runFailed(threadTitle: title, message: failure)
+            } else {
+                RunNotifier.shared.runFinished(
+                    threadTitle: title,
+                    summary: timeline.last { $0.kind == .assistantMessage }?.text
+                )
+            }
+            failureInCurrentRun = nil
 
         case .queueUpdate:
             if let pending = event.payload["queued"]?.arrayValue {
@@ -272,17 +292,7 @@ public final class ThreadSession: ObservableObject, Identifiable {
         guard let response = try? await client.send({ .getEntries(id: $0) }),
               let rawEntries = response.data?["entries"]?.arrayValue else { return }
 
-        let entries = rawEntries.compactMap { value -> SessionEntry? in
-            guard let id = value["id"]?.stringValue,
-                  let type = value["type"]?.stringValue else { return nil }
-            return SessionEntry(
-                id: id,
-                parentID: value["parentId"]?.stringValue,
-                kind: SessionEntry.Kind(rawValue: type),
-                timestamp: value["timestamp"]?.stringValue.flatMap(SessionTimestamp.parse),
-                payload: value
-            )
-        }
+        let entries = rawEntries.compactMap(SessionEntry.init(json:))
 
         // pi reports the active leaf explicitly; that beats any local heuristic.
         let leafID = response.data?["leafId"]?.stringValue

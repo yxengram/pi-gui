@@ -82,6 +82,23 @@ public struct SessionEntry: Sendable, Hashable, Identifiable {
         self.payload = payload
     }
 
+    /// Builds an entry from one raw JSON object.
+    ///
+    /// The same shapes arrive two ways — as lines of a session file, and inside a
+    /// `get_entries` response — so both paths share this rather than each growing
+    /// their own copy that can drift.
+    public init?(json: JSONValue) {
+        guard let id = json["id"]?.stringValue,
+              let type = json["type"]?.stringValue else { return nil }
+        self.init(
+            id: id,
+            parentID: json["parentId"]?.stringValue,
+            kind: Kind(rawValue: type),
+            timestamp: json["timestamp"]?.stringValue.flatMap(SessionTimestamp.parse),
+            payload: json
+        )
+    }
+
     /// The `AgentMessage` of a `message` entry.
     public var message: JSONValue? { payload["message"] }
 
@@ -151,16 +168,8 @@ public enum SessionParser {
                 continue
             }
 
-            guard let id = value["id"]?.stringValue else { continue }
-            entries.append(
-                SessionEntry(
-                    id: id,
-                    parentID: value["parentId"]?.stringValue,
-                    kind: SessionEntry.Kind(rawValue: type),
-                    timestamp: value["timestamp"]?.stringValue.flatMap(SessionTimestamp.parse),
-                    payload: value
-                )
-            )
+            guard let entry = SessionEntry(json: value) else { continue }
+            entries.append(entry)
         }
 
         return SessionFile(url: url, header: header, entries: entries)
